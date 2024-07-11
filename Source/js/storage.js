@@ -1,3 +1,7 @@
+//import * as fs from "libs/fs.js";
+//import { writeFile } from "libs/fs.js";
+import { writeFile } from "fs";
+
 class Subject 
 {
     name = "";
@@ -16,6 +20,8 @@ class Subject
         let count = this.subjects.length;
         this.subjects[count] = new Subject(sname, sdescription);
         this.subjects[count].depth = this.depth + 1;
+
+        return this.subjects[count];
     }
 }
 
@@ -30,9 +36,14 @@ subject.subjects[0].AddSubject("Grass", "This is some description regarding the 
 subject.subjects[0].subjects[0].AddSubject("Leaves", "This is some description regarding the leaves.");
 subject.subjects[0].subjects[0].AddSubject("Trunk", "This is some description regarding the trunk.");
 
-const rows = document.getElementById("rows");
+const data = JSON.stringify(subject);
 
-//addTopicButton.addEventListener("click", AddNewTopic(0));
+writeFile("../json/data.json", data);
+
+const rows = document.getElementById("rows");
+const topicName = document.getElementById("topic-name");
+const topicDescription = document.getElementById("topic-description");
+let addTopic = document.getElementById("add-topic");
 
 //ShowTopics();
 
@@ -95,15 +106,32 @@ function NewLi(className = "", innerText = "", id = "")
 
 function ShowSubject(sub)
 {
+    HideSubject(sub);
+
     let subCardCount = rows.childElementCount;
 
-    let newSub = NewDiv("col", "", "subject" + subCardCount);
+    let newSub = NewDiv("col-4 my-3", "", "subject" + subCardCount);
 
-    let newCard = NewDiv("card text-bg-primary");
+    let newCard = NewDiv("card text-bg-dark");
 
     let addBtn = NewBtn("btn btn-outline-light btn-sm position-absolute top-0 end-0 m-3 border-2 ", 
-        "ADD", "add-topic");
-    //addBtn.addEventListener("click", AddNewTopic);
+        "ADD");
+    addBtn.setAttribute("data-bs-toggle", "modal");
+    addBtn.setAttribute("data-bs-target", "#exampleModal");
+    addBtn.addEventListener("click", 
+        function ()
+        {
+            addTopic.replaceWith(addTopic.cloneNode(true));
+            addTopic = document.getElementById("add-topic");
+            addTopic.addEventListener("click", 
+                function ()
+                {
+                    CreateTopic(sub);
+                }
+            );
+            //CreateTopic(sub);
+        }
+    );
     newCard.appendChild(addBtn);
     
     let newBody = NewDiv("card-body");
@@ -131,15 +159,23 @@ function ShowTopics(sub)
     }
 }
 
+function CreateTopic(sub)
+{
+    const newSub = sub.AddSubject(topicName.value, topicDescription.value);
+    AddTopic(newSub);
+}
+
 function AddTopic(sub)
 {
     const subcard = document.getElementById("subject-card" + (sub.depth - 1));
     const count = subcard.childElementCount;
 
     let topcard = document.createElement("li");
-    topcard.className = "list-group-item d-flex justify-content-between align-items-start";
+    topcard.className = "list-group-item d-flex justify-content-between align-items-start collapsed";
     topcard.setAttribute("data-bs-toggle", "collapse");
     topcard.setAttribute("href", "#topicDescription" + (sub.depth - 1) + "" + count);
+    topcard.setAttribute("aria-expanded", "false");
+    topcard.setAttribute("aria-controls", "topicDescription" + (sub.depth - 1) + "" + count);
 
     let content = document.createElement("div");
     content.className = "ms-2 me-auto";
@@ -160,17 +196,65 @@ function AddTopic(sub)
     topcard.appendChild(content);
 
     let badge = document.createElement("div");
-    badge.className = "badge text-bg-primary rounded-pill";
+    badge.className = "badge text-bg-dark rounded-pill";
     badge.setAttribute("type", "button");
+    badge.innerText = "SHOW";
     badge.addEventListener("click", 
         function ()
         {
-            ShowSubject(sub);
+            if (badge.innerText == "SHOW")
+            {
+                const badges = subcard.querySelectorAll(".badge");
+                let i = 0;
+                while (i < badges.length)
+                {
+                    badges[i].innerText = "SHOW";
+                    i++;
+                }
+                const items = subcard.querySelectorAll(".list-group-item");
+                i = 0;
+                while (i < items.length)
+                {
+                    items[i].setAttribute("data-bs-toggle", "collapse");
+                    items[i].classList.add("list-group-item-dark");
+                    i++;
+                }
+                ShowSubject(sub);
+                badge.innerText = "HIDE";
+                if (topcard.className.includes("collapsed")) new bootstrap.Collapse(collapse);
+                topcard.setAttribute("data-bs-toggle", "");
+                topcard.classList.remove("list-group-item-dark");
+                
+            }
+            else if (badge.innerText == "HIDE")
+            {
+                const items = subcard.querySelectorAll(".list-group-item");
+                let i = 0;
+                while (i < items.length)
+                {
+                    items[i].classList.remove("list-group-item-dark");
+                    i++;
+                }
+                HideSubject(sub);
+                badge.innerText = "SHOW";
+                //if (!topcard.className.includes("collapsed")) collapse.className = "collapse";
+                topcard.setAttribute("data-bs-toggle", "collapse");
+            }
         }
     );
-    badge.innerText = "SHOW";
 
     topcard.appendChild(badge);
 
     subcard.appendChild(topcard);
+}
+
+function HideSubject(sub)
+{
+    let i = sub.depth;
+    while (rows.childElementCount > i)
+    {
+        const lastChild = rows.lastChild;
+        lastChild.innerHTML = "";
+        rows.removeChild(lastChild);
+    }
 }
